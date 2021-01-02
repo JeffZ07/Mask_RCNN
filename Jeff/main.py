@@ -41,7 +41,7 @@ class JeffConfig(Config):
     IMAGES_PER_GPU = 2
 
     # Number of classes (including background)
-    NUM_CLASSES = 1 + 2  # Background + Column + Grid
+    NUM_CLASSES = 1 + 4  # Background + Column + Beam + Wall(+ Grid )
 
     # Number of training steps per epoch
     STEPS_PER_EPOCH = 5
@@ -58,7 +58,9 @@ class Dataset(utils.Dataset):
 
     def load_jeff(self, dataset_dir, subset):
         self.add_class("drawing", 1, "column")
-        self.add_class("drawing", 2, "grid")
+        self.add_class("drawing", 2, "beam")
+        self.add_class("drawing", 3, "wall")
+        self.add_class("drawing", 4, "grid")
         print("load class")
 
         # Train or validation dataset?
@@ -114,18 +116,20 @@ class Dataset(utils.Dataset):
 
         # Convert polygons to a bitmap mask of shape
         # [height, width, instance_count]
+
         info = self.image_info[image_id]
         mask = np.zeros([info["height"], info["width"], len(info["polygons"])],
                         dtype=np.uint8)
+        typelist = np.ones([mask.shape[-1]], dtype=np.int32)
         classids = np.ones([mask.shape[-1]], dtype=np.int32)
+
         for i, p in enumerate(info["polygons"]):
             # Get indexes of pixels inside the polygon and set them to 1
             # rr, cc = skimage.draw.polygon(p['all_points_y'], p['all_points_x'])
             # mask[rr, cc, i] = 1
             attValue = p["shape_attributes"]
             typeValue = p["region_attributes"]
-            dic = {"Column": 1, "Grid": 2}
-            typelist = np.ones([mask.shape[-1]], dtype=np.int32)
+            dic = {"Column": 1, "Beam": 2, "Wall":3}
             if attValue["name"] == "polygon":
                 # Get indexes of pixels inside the polygon and set them to 1
                 rr, cc = skimage.draw.polygon(attValue['all_points_y'], attValue['all_points_x'])
